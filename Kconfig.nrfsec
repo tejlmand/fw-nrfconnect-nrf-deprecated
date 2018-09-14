@@ -1,0 +1,869 @@
+menu "Nordic Security"
+
+config NORDIC_SECURITY_BACKEND
+	bool
+	prompt "Use Nordic provided security backend"
+	default y
+	depends on SOC_FAMILY_NRF
+	help
+	  Help message
+
+if NORDIC_SECURITY_BACKEND
+
+comment "Backend Selection"
+
+config CC310_BACKEND
+	bool "cc310 backend support"
+	default y
+	depends on SOC_NRF52840
+	select NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0 if MBEDTLS_BACKEND
+	select NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1 if (OBERON_BACKEND || MBEDTLS_BACKEND)
+	select NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_2 if (UECC_BACKEND || MBEDTLS_BACKEND)
+	select NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_3 if (OBERON_BACKEND || UECC_BACKEND || MBEDTLS_BACKEND)
+	select NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_4 if OBERON_BACKEND
+	help
+	  Enable cc310 backend
+
+config CIFRA_BACKEND
+	bool "Enable the Cifra backend."
+	default n
+	help
+	  Enable the Cifra backend
+
+config OBERON_BACKEND
+	bool "Use Oberon backend"
+	default y if !SOC_NRF52840
+	select NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_3 if UECC_BACKEND
+	help
+	  Enable Oberon backend
+
+config UECC_BACKEND
+	bool "Use TinyCrypt/uECC backend"
+	default n
+	help
+	  Enable Tinycrypt/uECC backend
+
+config MBEDTLS_BACKEND
+	bool "Use mbedtls backend"
+	default y if !SOC_NRF52840
+	select NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1 if OBERON_BACKEND
+	select NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_2 if UECC_BACKEND
+	select NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_3 if (OBERON_BACKEND || UECC_BACKEND)
+	help
+	  Enable mbedtls backend
+
+# Group 0 is used to indicate when AES and ECC should use choice menu
+config NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+	bool
+
+# Group 1 is used to indicate when ECC curve25519, and ed25519, HASH, and HMAC should use choice menu
+config NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1
+	bool
+#	depends on (CC310_BACKEND || MBEDTLS_BACKEND) && OBERON_BACKEND
+
+# Group 2 is used to indicate when ECC secp192r1, secp224r1, secp256k1 should use choice menu
+config NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_2
+	bool
+
+# Group 3 is used to indicate when ECC secp256r1 should use choice menu
+config NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_3
+	bool
+
+# Group 4 is used to indicate when CHACHA-POLY should use choice menu
+config NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_4
+	bool
+
+config MBEDTLS_CFG_FILE
+	default "nordic-tls-config.h" if NORDIC_SECURITY_BACKEND
+	depends on NORDIC_SECURITY_BACKEND
+
+comment "Configuration section"
+
+choice
+	prompt "Memory allocator selection for nrf crypto."
+	default NRF_CRYPTO_ALLOCATOR_DEFAULT
+	help
+	  Memory allocator selection for nrf crypto. Default is alloca if possible or
+	  nrf_malloc otherwise. If 'User macros' are selected, the user has to create
+	  'nrf_crypto_allocator.h' file that contains NRF_CRYPTO_ALLOC, NRF_CRYPTO_FREE,
+	  and NRF_CRYPTO_ALLOC_ON_STACK.
+
+config NRF_CRYPTO_ALLOCATOR_DEFAULT
+	bool "Default"
+
+config NRF_CRYPTO_ALLOCATOR_USER_MACROS
+	bool "User macros" 
+
+config NRF_CRYPTO_ALLOCATOR_ON_STACK
+	bool "On stack (alloca)" 
+
+config NRF_CRYPTO_ALLOCATOR_MALLOC
+	bool "C dynamic memory (malloc)"
+
+config NRF_CRYPTO_ALLOCATOR_NRF_MALLOC
+	bool "SDK Memory Manager (nrf_malloc)"
+
+endchoice
+
+config CC310_RNG
+	bool
+	prompt "Enable RNG support using CC310 HW"
+	depends on CC310_BACKEND
+	default y
+	help
+	  Enable RNG support
+
+menuconfig AES_CONFIGURATION
+	bool
+	prompt "AES configuration"
+	depends on CC310_BACKEND || MBEDTLS_BACKEND
+	default y
+
+if AES_CONFIGURATION
+
+if !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+
+config NRF_CRYPTO_AES_CBC
+	bool
+	prompt "Enable the AES CBC mode."
+	default y
+	help
+	  Enable the AES CBC mode
+
+config NRF_CRYPTO_AES_CTR
+	bool
+	prompt "Enable the AES CTR mode"
+	default y
+	help
+	  Enable the AES CTR mode
+
+config NRF_CRYPTO_AES_ECB
+	bool
+	prompt "Enable the AES ECB mode"
+	default y
+	help
+	  Enable the AES ECB mode
+
+config NRF_CRYPTO_AES_CBC_MAC
+	bool
+	prompt "Enable the AES CBC_MAC mode"
+	default y
+	help
+	  Enable the AES CBC_MAC mode
+
+config NRF_CRYPTO_AES_CMAC
+	bool
+	prompt "Enable the AES CMAC mode"
+	default y
+	help
+	  Enable the AES CMAC mode
+
+
+config NRF_CRYPTO_AES_CCM
+	bool
+	prompt "Enable the AES CCM mode"
+	default y
+	help
+	  Enable the AES CCM mode
+
+config NRF_CRYPTO_AES_CCM_STAR
+	bool
+	prompt "Enable the AES CCM* mode"
+	default y
+	help
+	  Enable the AES CCM* mode
+
+endif # !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+
+if NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+
+choice
+	prompt "AES CBC mode."
+	default CC310_AES_CBC
+	help
+	  Backend selection for AES CBC mode
+
+config DISABLED_AES_CBC
+	bool "Disabled"
+
+config CC310_AES_CBC
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_AES_CBC
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+choice
+	bool
+	prompt "AES CTR mode"
+	default CC310_AES_CTR
+	help
+	  Backend selection for AES CTR mode
+
+config DISABLED_AES_CTR
+	bool "Disabled"
+
+config CC310_AES_CTR
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_AES_CTR
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+choice
+	bool
+	prompt "AES ECB mode"
+	default CC310_AES_ECB
+	help
+	  Backend selection for AES ECB mode
+
+config DISABLED_AES_ECB
+	bool "Disabled"
+
+config CC310_AES_ECB
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_AES_ECB
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+choice
+	bool
+	prompt "AES CBC_MAC mode"
+	default CC310_AES_CBC_MAC
+	help
+	  Backend selection for AES CBC_MAC mode
+
+config DISABLED_AES_CBC_MAC
+	bool "Disabled"
+
+config CC310_AES_CBC_MAC
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_AES_CBC_MAC
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+choice
+	bool
+	prompt "AES CMAC mode"
+	default CC310_AES_CMAC
+	help
+	  Backend selection for AES CMAC mode
+
+config DISABLED_AES_CMAC
+	bool "Disabled"
+
+config CC310_AES_CMAC
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_AES_CMAC
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+choice
+	bool
+	prompt "AES CCM mode"
+	default CC310_AES_CCM
+	help
+	  Backend selection for AES CCM mode
+
+config DISABLED_AES_CCM
+	bool "Disabled"
+
+config CC310_AES_CCM
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_AES_CCM
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+choice
+	bool
+	prompt "AES CCM* mode"
+	default CC310_AES_CCM_STAR
+	help
+	  Backend selection for AES CCM* mode
+
+config DISABLED_AES_CCM_STAR
+	bool "Disabled"
+
+config CC310_AES_CCM_STAR
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_AES_CCM_STAR
+	bool "mbedtls" if MBEDTLS_BACKEND
+
+endchoice
+
+endif # NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+
+endif # AES_CONFIGURATION && NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+
+menuconfig CHACHA_POLY_CONFIGURATION
+	bool
+	prompt "CHACHA-POLY configuration"
+	depends on CC310_BACKEND || OBERON_BACKEND
+	default y
+
+if CHACHA_POLY_CONFIGURATION
+
+config NRF_CRYPTO_CHACHA_POLY
+	bool
+	prompt "Enable CHACHA-POLY"
+	default y
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_4
+	help
+	  Enable the CHACHA-POLY mode
+
+choice
+	bool
+	prompt "CHACHA-POLY backend"
+	default CC310_CHACHA_POLY
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_4
+	help
+	  Backend selection for CHACHA-POLY
+
+config DISABLED_CHACHA_POLY
+	bool "Disabled"
+
+config CC310_CHACHA_POLY
+	bool "cc310" if CC310_BACKEND
+
+config OBERON_CHACHA_POLY
+	bool "oberon" if OBERON_BACKEND
+endchoice
+
+endif # CHACHA_POLY_CONFIGURATION
+
+
+menuconfig ECC_CONFIGURATION
+	bool
+	prompt "Elliptical curves configuration"
+	depends on (CC310_BACKEND || MBEDTLS_BACKEND || OBERON_BACKEND || UECC_BACKEND)
+	default y
+
+if ECC_CONFIGURATION
+
+config NRF_CRYPTO_ECC_SECP160R1
+	bool
+	prompt "Enable the secp160r1 elliptic curve support"
+	default y
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0 && (CC310_BACKEND || MBEDTLS_BACKEND)
+	help
+	  Enable the secp160r1 elliptic curve support
+
+choice
+	bool
+	default CC310_ECC_SECP160R1
+	prompt "secp160r1 elliptic curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+	help
+	  Backend selection for secp160r1 elliptic curve support
+
+config DISABLED_ECC_SECP160R1
+	bool "Disabled"
+
+config CC310_ECC_SECP160R1
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_ECC_SECP160R1
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+config NRF_CRYPTO_ECC_SECP160R2 
+	bool
+	prompt "Enable the secp160r2 elliptic curve support"
+	default y
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0 && (CC310_BACKEND || MBEDTLS_BACKEND)
+	help
+	  Enable the secp160r2 elliptic curve support
+
+choice
+	bool
+	default CC310_ECC_SECP160R2 
+	prompt "secp160r2 elliptic curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+	help
+	  Backend selection for secp160r2 elliptic curve support
+
+config DISABLED_ECC_SECP160R2
+	bool "Disabled"
+
+config CC310_ECC_SECP160R2
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_ECC_SECP160R2
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+config NRF_CRYPTO_ECC_SECP192R1
+	bool
+	prompt "Enable the secp192r1 elliptic curve support"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_2 && (CC310_BACKEND || MBEDTLS_BACKEND || UECC_BACKEND)
+	default y
+	help
+	  Enable the secp192r1 elliptic curve support
+
+choice
+	bool
+	default CC310_ECC_SECP192R1 if CC310_BACKEND
+	default UECC_ECC_SECP192R1 if UECC_BACKEND
+	prompt "secp192r1 elliptic curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_2
+	help
+	  Backend selection for secp192r1 elliptic curve support
+
+config DISABLED_ECC_SECP192R1
+	bool "Disabled"
+
+config CC310_ECC_SECP192R1
+	bool "cc310" if CC310_BACKEND
+
+config UECC_ECC_SECP192R1
+	bool "uEcc" if UECC_BACKEND
+
+config MBEDTLS_ECC_SECP192R1
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+
+config NRF_CRYPTO_ECC_SECP224R1
+	bool
+	prompt "Enable the secp224r1 elliptic curve support"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_2 && (CC310_BACKEND || MBEDTLS_BACKEND || UECC_BACKEND)
+	default y
+	help
+	  Enable the secp224r1 elliptic curve support
+
+choice
+	bool
+	default CC310_ECC_SECP224R1 if CC310_BACKEND
+	default UECC_ECC_SECP224R1 if UECC_BACKEND
+	prompt "secp224r1 elliptic curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_2
+	help
+	  Backend selection for secp224r1 elliptic curve support
+
+config DISABLED_ECC_SECP224R1
+	bool "Disabled"
+
+config CC310_ECC_SECP224R1
+	bool "cc310" if CC310_BACKEND
+
+config UECC_ECC_SECP224R1
+	bool "uEcc" if UECC_BACKEND
+
+config MBEDTLS_ECC_SECP224R1
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+
+config NRF_CRYPTO_ECC_SECP256R1
+	bool
+	prompt "Enable the secp256r1 elliptic curve support"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_3 && (CC310_BACKEND || MBEDTLS_BACKEND || OBERON_BACKEND || UECC_BACKEND)
+	default y
+	help
+	  Enable the secp256r1 elliptic curve support
+
+choice
+	bool
+	default CC310_ECC_SECP256R1 if CC310_BACKEND
+	default OBERON_ECC_SECP256R1 if OBERON_BACKEND
+	prompt "secp256r1 elliptic curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_3
+	help
+	  Backend selection for secp256r1 elliptic curve support
+
+config DISABLED_ECC_SECP256R1
+	bool "Disabled"
+
+config CC310_ECC_SECP256R1
+	bool "cc310" if CC310_BACKEND
+
+config OBERON_ECC_SECP256R1
+	bool "oberon" if OBERON_BACKEND
+
+config UECC_ECC_SECP256R1
+	bool "uEcc" if UECC_BACKEND
+
+config MBEDTLS_ECC_SECP256R1
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+config NRF_CRYPTO_ECC_SECP384R1
+	bool
+	prompt "Enable the secp384r1 elliptic curve support"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0 && (CC310_BACKEND || MBEDTLS_BACKEND)
+	default y
+	help
+	  Enable the secp384r1 elliptic curve support
+
+choice
+	bool
+	default CC310_ECC_SECP384R1
+	prompt "secp384r1 elliptic curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+	help
+	  Backend selection for secp384r1 elliptic curve support
+
+config DISABLED_ECC_SECP384R1
+	bool "Disabled"
+
+config CC310_ECC_SECP384R1
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_ECC_SECP384R1
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+config NRF_CRYPTO_ECC_SECP521R1
+	bool
+	prompt "Enable the secp521r1 elliptic curve support"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0 && (CC310_BACKEND || MBEDTLS_BACKEND)
+	default y
+	help
+	  Enable the secp521r1 elliptic curve support
+
+choice
+	bool
+	default CC310_ECC_SECP521R1
+	prompt "secp521r1 elliptic curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+	help
+	  Backend selection for secp521r1 elliptic curve support
+
+config DISABLED_ECC_SECP521R1
+	bool "Disabled"
+
+config CC310_ECC_SECP521R1
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_ECC_SECP521R1
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+config NRF_CRYPTO_ECC_SECP160K1
+	bool
+	prompt "Enable the secp160k1 elliptic curve support"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0 && (CC310_BACKEND || MBEDTLS_BACKEND)
+	default y
+	help
+	  Enable the secp160k1 elliptic curve support
+
+choice
+	bool
+	default CC310_ECC_SECP160K1
+	prompt "secp160k1 elliptic curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+	help
+	  Backend selection for secp160k1 elliptic curve support
+
+config DISABLED_ECC_SECP160K1
+	bool "Disabled"
+
+config CC310_ECC_SECP160K1
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_ECC_SECP160K1
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+config NRF_CRYPTO_ECC_SECP192K1
+	bool
+	prompt "Enable the secp192k1 elliptic curve support"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0 && (CC310_BACKEND || MBEDTLS_BACKEND)
+	default y
+	help
+	  Enable the secp192k1 elliptic curve support
+choice
+	bool
+	default CC310_ECC_SECP192K1
+	prompt "secp192k1 elliptic curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+	help
+	  Backend selection for secp192k1 elliptic curve support
+
+config DISABLED_ECC_SECP192K1
+	bool "Disabled"
+
+config CC310_ECC_SECP192K1
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_ECC_SECP192K1
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+
+config NRF_CRYPTO_ECC_SECP224K1
+	bool
+	prompt "Enable the secp224k1 elliptic curve support"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0 && (CC310_BACKEND || MBEDTLS_BACKEND)
+	default y
+	help
+	  Enable the secp224k1 elliptic curve support
+
+choice
+	bool
+	default CC310_ECC_SECP224K1
+	prompt "secp224k1 elliptic curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_0
+	help
+	  Backend selection for secp224k1 elliptic curve support
+
+config DISABLED_ECC_SECP224K1
+	bool "Disabled"
+
+config CC310_ECC_SECP224K1
+	bool "cc310" if CC310_BACKEND
+
+config MBEDTLS_ECC_SECP224K1
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+config NRF_CRYPTO_ECC_SECP256K1
+	bool
+	prompt "Enable the secp256k1 elliptic curve support"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_2 && (CC310_BACKEND || MBEDTLS_BACKEND || UECC_BACKEND)
+	default y
+	help
+	  Enable the secp256k1 elliptic curve support
+
+choice
+	bool
+	default CC310_ECC_SECP256K1
+	prompt "secp256k1 elliptic curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_2
+	help
+	  Backend selection for secp256k1 elliptic curve support
+
+config DISABLED_ECC_SECP256K1
+	bool "Disabled"
+
+config CC310_ECC_SECP256K1
+	bool "cc310" if CC310_BACKEND
+
+config UECC_ECC_SECP256K1
+	bool "uEcc" if UECC_BACKEND
+
+config MBEDTLS_ECC_SECP256K1
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+config NRF_CRYPTO_ECC_CURVE25519
+	bool
+	prompt "Enable the Curve25519 curve support"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1 && (CC310_BACKEND || MBEDTLS_BACKEND || OBERON_BACKEND)
+	default y
+	help
+	  Enable the Curve25519 curve support
+
+choice
+	bool
+	default CC310_ECC_CURVE25519 if CC310_BACKEND
+	default OBERON_ECC_CURVE25519 if OBERON_BACKEND
+	prompt "Curve25519 curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1
+	help
+	  Backend selection for Curve25519 curve support
+
+config DISABLED_ECC_CURVE25519
+	bool "Disabled"
+
+config CC310_ECC_CURVE25519
+	bool "cc310" if CC310_BACKEND
+
+config OBERON_ECC_CURVE25519
+	bool "oberon" if OBERON_BACKEND
+
+config MBEDTLS_ECC_CURVE25519
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+config NRF_CRYPTO_ECC_ED25519
+	bool
+	prompt "Enable the Ed25519 curve support"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1 && (CC310_BACKEND || MBEDTLS_BACKEND || OBERON_BACKEND)
+	default y
+	help
+	  Enable the Ed25519 curve support
+
+choice
+	bool
+	default CC310_ECC_ED25519 if CC310_BACKEND
+	default OBERON_ECC_ED25519 if OBERON_BACKEND
+	prompt "Ed25519 curve support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1
+	help
+	  Backend selection for Ed25519 curve support
+
+config DISABLED_ECC_ED25519
+	bool "Disabled"
+
+config CC310_ECC_ED25519
+	bool "cc310" if CC310_BACKEND
+
+config OBERON_ECC_ED25519
+	bool "oberon" if OBERON_BACKEND
+
+config MBEDTLS_ECC_ED25519
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+endif # ECC_CONFIGURATION
+
+menuconfig HASH_FUNCTIONS_CONFIGURATION
+	bool
+	prompt "Hash functions configuration"
+	depends on (CC310_BACKEND || MBEDTLS_BACKEND || OBERON_BACKEND)
+	default y
+
+if HASH_FUNCTIONS_CONFIGURATION
+
+config NRF_CRYPTO_HASH_SHA256
+	bool
+	prompt "SHA-256 hash functionality."
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1 && (CC310_BACKEND || MBEDTLS_BACKEND || OBERON_BACKEND)
+	default y
+	help
+	  SHA-256 hash functionality.
+
+choice
+	bool
+	default CC310_HASH_SHA256 if CC310_BACKEND
+	default MBEDTLS_HASH_SHA256 if MBEDTLS_BACKEND
+	prompt "SHA-256 hash support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1
+	help
+	  Backend selection for SHA-256 hash support
+
+config DISABLED_HASH_SHA256
+	bool "Disabled"
+
+config CC310_HASH_SHA256
+	bool "cc310" if CC310_BACKEND
+
+config OBERON_HASH_SHA256
+	bool "oberon" if OBERON_BACKEND
+
+config MBEDTLS_HASH_SHA256
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+config NRF_CRYPTO_HASH_SHA512
+	bool
+	prompt "SHA-512 hash functionality"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1 && (CC310_BACKEND || MBEDTLS_BACKEND || OBERON_BACKEND)
+	default y
+	help
+	  SHA-512 hash support
+
+choice
+	bool
+	default CC310_HASH_SHA512 if CC310_BACKEND
+	default MBEDTLS_HASH_SHA512 if MBEDTLS_BACKEND
+	prompt "SHA-512 hash support"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1
+	help
+	  Backend selection for Ed25519 curve support
+
+config DISABLED_HASH_SHA512
+	bool "Disabled"
+
+config CC310_HASH_SHA512
+	bool "cc310" if CC310_BACKEND
+
+config OBERON_HASH_SHA512
+	bool "oberon" if OBERON_BACKEND
+
+config MBEDTLS_HASH_SHA512
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+endif # HASH_FUNCTIONS_CONFIGURATION
+
+menuconfig HMAC_CONFIGURATION
+	bool
+	prompt "Hash based Message Authentication Code (HMAC) configuration"
+	depends on (CC310_BACKEND || MBEDTLS_BACKEND || OBERON_BACKEND)
+	default y
+
+if HMAC_CONFIGURATION
+
+config NRF_CRYPTO_HMAC_SHA256
+	bool
+	prompt "HMAC using SHA-256"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1 && (CC310_BACKEND || MBEDTLS_BACKEND || OBERON_BACKEND)
+	default y
+	help
+	  HMAC using SHA-256
+
+choice
+	bool
+	default CC310_HMAC_SHA256 if CC310_BACKEND
+	default MBEDTLS_HMAC_SHA256 if MBEDTLS_BACKEND
+	prompt "HMAC using SHA-256"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1
+	help
+	  Backend selection for HMAC using SHA-256
+
+config DISABLED_HMAC_SHA256
+	bool "Disabled"
+
+config CC310_HMAC_SHA256
+	bool "cc310" if CC310_BACKEND
+
+config OBERON_HMAC_SHA256
+	bool "oberon" if OBERON_BACKEND
+
+config MBEDTLS_HMAC_SHA256
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+config NRF_CRYPTO_HMAC_SHA512
+	bool
+	prompt "HMAC using SHA-512"
+	depends on !NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1 && (CC310_BACKEND || MBEDTLS_BACKEND || OBERON_BACKEND)
+	default y
+	help
+	  HMAC using SHA-512
+
+choice
+	bool
+	default CC310_HMAC_SHA512 if CC310_BACKEND
+	default MBEDTLS_HMAC_SHA512 if MBEDTLS_BACKEND
+	prompt "HMAC using SHA-512"
+	depends on NRF_CRYPTO_MULTIPLE_CHOICE_GROUP_1
+	help
+	  Backend selection for HMAC using SHA-512
+
+config DISABLED_HMAC_SHA512
+	bool "Disabled"
+
+config CC310_HMAC_SHA512
+	bool "cc310" if CC310_BACKEND
+
+config OBERON_HMAC_SHA512
+	bool "oberon" if OBERON_BACKEND
+
+config MBEDTLS_HMAC_SHA512
+	bool "mbedtls" if MBEDTLS_BACKEND
+endchoice
+
+endif # HMAC_CONFIGURATION
+
+if CIFRA_BACKEND
+
+config  CIFRA_AES_EAX
+	bool
+	prompt "Enable the AES EAX mode using Cifra."
+	default y if CIFRA_BACKEND
+	help
+	  Enable the AES EAX mode using Cifra.
+
+endif # CIFRA_BACKEND
+
+endif # NORDIC_SECURITY_BACKEND
+
+endmenu
